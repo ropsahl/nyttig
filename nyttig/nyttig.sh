@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
 var="$1 Ikke funnet"
+KEYS='oc var registry jenkins docker '
+if [[ ${KEYS} != *"$1"* ]] ;then
+  echo Lovlige argument: $KEYS
+fi
+
 if [[ $1 == oc ]] ; then
     read -d '' var <<"EOF"
 oc adm policy add-scc-to-user -z default anyuid
@@ -36,11 +41,18 @@ echo curl -sIik -H "Accept: application/vnd.docker.distribution.manifest.v2+json
 
 id=$(curl --silent --fail --insecure -H "Accept: application/vnd.docker.distribution.manifest.v2+json" https://docker-registry01.local.husbanken.no/v2/$image/manifests/$tag |grep digest|head -1|sed 's/.*sha256://')
 
+for image in $(curl -sqfk https://docker-registry01.local.husbanken.no/v2/_catalog?n=50000|jq -r '.repositories|.[]'|grep startskudd); do
+   echo $image;
+   for tag in $(curl -sqfk https://docker-registry01.local.husbanken.no/v2/$image/tags/list|jq -r '.tags|.[]'|grep '2.5.0'); do
+     sha=$(curl -sIik -H "Accept: application/vnd.docker.distribution.manifest.v2+json"  https://docker-registry01.local.husbanken.no/v2/$image/manifests/$tag|grep Digest|sed 's/Docker-Content-Digest: //'|strings);
+     echo "$sha $tag";
+   done;
+done
 
 EOF
 fi
 
-if [[ $1 == stopSlave ]] ; then
+if [[ $1 == jenkins ]] ; then
     read -d '' var <<"EOF"
 for (aSlave in hudson.model.Hudson.instance.slaves) {
     println('====================');
