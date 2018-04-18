@@ -1,30 +1,61 @@
 #!/usr/bin/env bash
 
 var="$1 Ikke funnet"
-KEYS='oc var registry jenkins docker '
+KEYS='oc var reg jenkins docker curl state git tools prom color'
 if [[ ${KEYS} != *"$1"* ]] ;then
   echo Lovlige argument: $KEYS
+fi
+
+if [[ $1 == tools ]] ; then
+    read -d '' var <<"EOF"
+stern_linux_amd64
+EOF
+fi
+
+if [[ $1 =~ prom:* ]] ; then
+    read -d '' var <<"EOF"
+
+{__name__=~"kube_replicationcontroller_status.*",namespace="bostotte-bygg-deploy"}
+
+# Ignorere pod og server, fra resultatet slik at pod restart ikke gir nytt datasett:
+label_replace(label_replace(haproxy_server_http_responses_total{namespace=~"$Namespace",route=~".+",code=~".+"},"pod","ignore","pod","(.+)"),"server","ignore","server",".+")
+
+# Bare de der verdi >0
+haproxy_server_http_responses_total{namespace=~"$Namespace",route=~".+",code=~".+"} and haproxy_server_http_responses_total{namespace=~"$Namespace",route=~".+",code=~".+"}>0
+haproxy_server_http_responses_total{namespace=~"$Namespace",route=~".+",code=~".+"} unless haproxy_server_http_responses_total{namespace=~"$Namespace",route=~".+",code=~".+"}==0
+
+label_replace(kube_replicationcontroller_status_replicas{namespace="bostotte-bygg-deploy"},"navn","$1","replicationcontroller","(.*)-.*")
+label_replace(kube_replicationcontroller_status_available_replicas{instance=~"kube.*"},"navn","$1","replicationcontroller","(.*)-.*")
+EOF
 fi
 
 if [[ $1 == oc ]] ; then
     read -d '' var <<"EOF"
 oc adm policy add-scc-to-user -z default anyuid
 oc exec -it soknadsko- bash
+#Slette hengende pod,
+GUI->Delete pod, kryss av Delete pod immediately
+#Port forward:
+oc port-forward -p $(oc get pods|grep hb-openshift-mongo|sed 's/ .*//') 27017:27017
+#CRON
+oc run cronmaintenance --image=docker-registry01.local.husbanken.no/hb-java-8-rhel7:2.0.1 --schedule='*/1 * * * *' --restart=Never --labels parent="cronmaintenance" --command -- curl registry-maintenance:8080/delete/candidates
+oc delete cronjob/cronmaintenance
+
 EOF
 fi
 
-if [[ $1 =~ var ]] ; then
+if [[ $1 =~ var.* ]] ; then
     read -d '' var <<"EOF"
 # Frem til:
 ${VAR%%:*}
 # Etter:
-${VAR##:*}
+${VAR##*:}
 # 8 tegn fra det 5.
 ${VAR;5;8}
 EOF
 fi
 
-if [[ $1 =~ registry ]] ; then
+if [[ $1 =~ reg.* ]] ; then
     read -d '' var <<"EOF"
 # liste alle image
 curl -sqfk https://docker-registry01.local.husbanken.no/v2/_catalog?n=50000|jq -r '.repositories|.[]'
@@ -49,10 +80,19 @@ for image in $(curl -sqfk https://docker-registry01.local.husbanken.no/v2/_catal
    done;
 done
 
+BLOBS
+curl -k -H "Accept: application/vnd.docker.distribution.manifest.v2+json"  https://docker-registry01.local.husbanken.no/v2/hb-java-8-rhel7/blobs/sha256:f355ab90ff81937205a1db238720a782d8b44f3003b35336cc600295d3a2abf5
+
+# Semantisk versjonering, major minor:
+JENKINS_VERSJON="3.10.1-develop"
+RE='[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
+JENKINS_MAJOR_VERSJON=$(echo $JENKINS_VERSJON | sed -e "s#$RE#\1\4#")
+JENKINS_MINOR_VERSJON=$(echo $JENKINS_VERSJON | sed -e "s#$RE#\1.\2\4#")
+
 EOF
 fi
 
-if [[ $1 == jenkins ]] ; then
+if [[ $1 == jenkins.* ]] ; then
     read -d '' var <<"EOF"
 for (aSlave in hudson.model.Hudson.instance.slaves) {
     println('====================');
@@ -80,7 +120,7 @@ for (aSlave in hudson.model.Hudson.instance.slaves) {
 }
 EOF
 fi
-if [[ $1 =~ docker ]] ; then
+if [[ $1 =~ docker.* ]] ; then
     read -d '\n' var <<'EOF'
     docker -H doc-test-master:2376 ps|grep stil
     docker -H doc-test-master:2376 logs f453570059bd
@@ -122,6 +162,69 @@ if [[ $1 =~ docker ]] ; then
             digest=$(docker inspect --format='{{json .RepoDigests}}' $id|sed -e "s#docker-registry01.local.husbanken.no/startlan-esoknad-vedlegg-behandling[:@]##g"  -e 's/\[\"//g' -e 's/\".*//g')
             curl -sIik -H Accept: application/vnd.docker.distribution.manifest.v2+json -X DELETE https://docker-registry01.local.husbanken.no/v2/startlan-esoknad-vedlegg-behandling/manifests/$digest
             curl -sIik -H Accept: application/vnd.docker.distribution.manifest.v2+json -X DELETE https://docker-registry01.local.husbanken.no/v2/startlan-esoknad-vedlegg-behandling/manifests/$sha;
+EOF
+fi
+
+if [[ $1 =~ curl.* ]] ; then
+    read -d '\n' var <<'EOF'
+POST:
+curl -X POST https://sim-esoknad-startlan-esoknad-e2e.cluster.dev/simulert/login -d='{ "uid": "01026300394",  "fnr": "01026300394",  "mobiltelefonnummer": "12345678",  "Culture": "nb",  "DigitalContactInfoStatus": "NEI",  "SecurityLevel": 999 }'
+EOF
+fi
+
+if [[ $1 =~ koer.* ]] ; then
+    read -d '\n' var <<'EOF'
+    oc exec -it soknadsko- bash
+wildfly/bin/jboss-cli.sh
+connect
+/subsystem=messaging/hornetq-server=default/jms-queue=DLQ:list-messages
+/subsystem=messaging/hornetq-server=default/jms-queue=meldingFraSokerDLQ:list-messages
+/subsystem=messaging/hornetq-server=default/jms-queue=meldingLestDLQ:list-messages
+/subsystem=messaging/hornetq-server=default/jms-queue=soknadTilSaksbehandlingDLQ:list-messages
+/subsystem=messaging/hornetq-server=default/jms-queue=vedleggDLQ:list-messages
+
+/subsystem=messaging/hornetq-server=default/jms-queue=vedleggDLQ:move-message(message-id=ID:afbf84da-1bfd-11e8-b633-e5609acccc92, other-queue-name=vedlegg)
+EOF
+fi
+
+if [[ $1 =~ state.* ]] ; then
+    read -d '\n' var <<'EOF'
+ kubectl scale statefulsets <stateful-set-name> --replicas=<new-replicas>
+EOF
+fi
+
+if [[ $1 =~ git.* ]] ; then
+    read -d '\n' var <<'EOF'
+Fjern 3 siste commit, blir usynk mot remote så må committe på ny branch!
+git reset --soft HEAD~3
+Checksum for dir:
+git ls-tree -r HEAD startlan-esoknad-backend|git hash-object --stdin
+git tag -a -f -m 'Jenkins pipeline docker image' 0.4.0-develop && git push --tags -f
+EOF
+fi
+
+if [[ $1 =~ col.* ]] ; then
+    read -d '\n' var <<'EOF'
+RESTORE=$(echo -en '\033[0m')
+RED=$(echo -en '\033[00;31m')
+GREEN=$(echo -en '\033[00;32m')
+YELLOW=$(echo -en '\033[00;33m')
+BLUE=$(echo -en '\033[00;34m')
+MAGENTA=$(echo -en '\033[00;35m')
+PURPLE=$(echo -en '\033[00;35m')
+CYAN=$(echo -en '\033[00;36m')
+LIGHTGRAY=$(echo -en '\033[00;37m')
+LRED=$(echo -en '\033[01;31m')
+LGREEN=$(echo -en '\033[01;32m')
+LYELLOW=$(echo -en '\033[01;33m')
+LBLUE=$(echo -en '\033[01;34m')
+LMAGENTA=$(echo -en '\033[01;35m')
+LPURPLE=$(echo -en '\033[01;35m')
+LCYAN=$(echo -en '\033[01;36m')
+WHITE=$(echo -en '\033[01;37m')
+
+# Test
+echo ${RED}RED${GREEN}GREEN${YELLOW}YELLOW${BLUE}BLUE${PURPLE}PURPLE${CYAN}CYAN${WHITE}WHITE${RESTORE}
 EOF
 fi
 
