@@ -16,6 +16,8 @@ if [[ $1 =~ prom:* ]] ; then
     read -d '' var <<"EOF"
 
 {__name__=~"kube_replicationcontroller_status.*",namespace="bostotte-bygg-deploy"}
+#all metrikk som har attributtene ...
+{__name__=~".*",image=~"docker-registry01.local.husbanken.no.*",container_name="sak",namespace="startlan-startskudd-atest"}
 
 # Ignorere pod og server, fra resultatet slik at pod restart ikke gir nytt datasett:
 label_replace(label_replace(haproxy_server_http_responses_total{namespace=~"$Namespace",route=~".+",code=~".+"},"pod","ignore","pod","(.+)"),"server","ignore","server",".+")
