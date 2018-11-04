@@ -48,12 +48,32 @@ fi
 
 if [[ $1 =~ var.* ]] ; then
     read -d '' var <<"EOF"
-# Frem til:
-${VAR%%:*}
-# Etter:
-${VAR##*:}
-# 8 tegn fra det 5.
-${VAR;5;8}
+#https://www.thegeekstuff.com/2010/07/bash-string-manipulation
+# Following syntax deletes the longest match of $substring from front of $string:
+${string##substring}
+# Following syntax deletes the longest match of $substring from back of $string
+${string%%substring}
+
+Following syntax deletes the shortest match of $substring from front of $string
+${string#substring}
+Following syntax deletes the shortest match of $substring from back of $string
+${string%substring}
+
+# Extract substring from $string at $position
+${string:position:length}
+
+# Remove last char
+${string::-1}
+
+
+# Replace only first match
+${string/pattern/replacement}
+# Replace all the matches
+${string//pattern/replacement}
+
+${string::-1}
+
+
 EOF
 fi
 
@@ -197,6 +217,8 @@ fi
 
 if [[ $1 =~ git.* ]] ; then
     read -d '\n' var <<'EOF'
+https://github.com/k88hudson/git-flight-rules/blob/master/README.md#what-did-i-just-commit
+
 Fjern 3 siste commit, blir usynk mot remote så må committe på ny branch!
 git reset --soft HEAD~3
 Checksum for dir:
@@ -205,8 +227,23 @@ git tag -a -f -m 'Jenkins pipeline docker image' 0.4.0-develop && git push --tag
 EOF
 fi
 
+if [[ $1 =~ reg.* ]] ; then
+    read -d '\n' var <<'EOF'
+#registry tags
+$ curl -s http://registry-cache-hb-openshift-develop.cluster.dev/ |jq '.liste[]|.tags' >liste02.txt
+$ rm d02/*;while read line ; do t=${line##*v2/};t=${t%%/tags*}; echo $line; /usr/bin/curl -k  ${line//\"} > d02/$t.txt ; done < liste02.txt
+
+$ for f in *.txt ; do cat $f|jq -r '.tags[]|.'|sort > sorted_$f;done
+$ while read line ; do t=${line##*v2/};t=sorted_${t%%/tags*}.txt; echo $t; diff d01/$t d02/$t ; done < liste01.txt
+
+EOF
+fi
+
 if [[ $1 =~ col.* ]] ; then
     read -d '\n' var <<'EOF'
+SAVE_POS=$(echo -en '\033[s')
+RESTORE_POS=$(echo -en '\033[u')
+DEL_EOL=$(echo -en '\033[K')
 RESTORE=$(echo -en '\033[0m')
 RED=$(echo -en '\033[00;31m')
 GREEN=$(echo -en '\033[00;32m')

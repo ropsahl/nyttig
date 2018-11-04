@@ -19,6 +19,13 @@ function __ocp() {
     fi
 }
 
+git_branch() {
+  b=$(git branch 2>/dev/null | grep '^*' | colrm 1 2)
+  s=$(git status|grep modified>/dev/null;if [[ $? == 0 ]]; then echo '*';fi)
+  c=$(if [[ "$b" == "master" ]];then echo $RED;else echo $GREEN;fi)
+  echo "$c[$b$s]"
+}
+
 function _tagWindow() { 
   _TTAG=$1;
   color='\e[0;97m';
@@ -27,7 +34,7 @@ function _tagWindow() {
   if [[ $(hostname) =~ mgmt-devops01 ]] ;then color='\e[38;5;226m';textColor=$color;fi
   if [[ $(hostname) =~ .* ]] ;then color='\e[38;5;226m';fi
   if [[ $(hostname) =~ localhost ]] ;then color='\e[0;32m';fi
-  PS1="$(__ocp) \u@\h \[$color\]\w\[$textColor\]\n\$ "
+  PS1="$(__ocp)$(git_branch)\[$color\]\w\[$textColor\]\n\$ "
 }
 _tagWindow
 function hg() { history|grep "$@"; }
@@ -46,5 +53,33 @@ function du_nodes() {
   done
 }
 
-PROMPT_COMMAND='_tagWindow'
+log_bash_persistent_history()
+{
+  cmd=$(history 1)
+  
+  if [ "$cmd" != "$PERSISTENT_HISTORY_LAST" ]
+  then
+    echo $(date +'%Y-%m-%d-%H:%M:%S') ${cmd#* } >> ~/.persistent_history
+    export PERSISTENT_HISTORY_LAST="$cmd"
+  fi
+}
+
+# Stuff to do on PROMPT_COMMAND
+run_on_prompt_command()
+{
+    log_bash_persistent_history
+    _tagWindow
+}
+
+PROMPT_COMMAND="run_on_prompt_command"
+export DATE_TIME='[0-9]*-[0-9]*-[0-9]*[ -][0-9]*:[0-9]*:[0-9]* '
+function hgp {
+ cat ~/.persistent_history |sed "s/$DATE_TIME//" |sort -u |grep --color "$1" 
+}
+
+source <(kubectl completion bash)
+alias k=kubectl
+alias l='ls -lrt'
+
+setxkbmap no
 
