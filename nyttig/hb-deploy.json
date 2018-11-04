@@ -1,0 +1,13 @@
+{
+  "applications": [
+    {
+      "name": "deployproxy",
+      "style": "hb-spring-boot",
+      "route": "deployproxy"
+    },
+    {
+      "name": "bitbucket-updater",
+      "style": "hb-spring-boot"
+    }
+  ]
+}
