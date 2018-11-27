@@ -21,7 +21,14 @@ LPURPLE=$(echo -en '\033[01;35m')
 LCYAN=$(echo -en '\033[01;36m')
 WHITE=$(echo -en '\033[01;37m')
 
-#variable#substring
 
 #for#range
 for i in {1..4};do echo -n ${SAVE_POS}; echo -n $i;sleep 1;echo -n ${RESTORE_POS}${DEL_EOL};done
+
+
+#variable#substring
+var="Hello there"
+echo $var:' ${var%% *}' ${var%% *}
+echo $var:' ${var##* }' ${var##* }
+echo $var:' ${var/th/w}' ${var/th/w}
+echo $var:' ${var//e/XX}'  ${var//e/XX}

@@ -5,15 +5,17 @@ YELLOW=$(echo -en '\033[00;33m')
 BLUE=$(echo -en '\033[00;34m')
 
 function __ocp() {
-    status=$(oc status 2>/dev/null)
+    status=$(cat   ~/.kube/config |grep 'current-context')
     if [[ $? == 0 ]] ; then
-        project=${status%% on*};project=${project##* }
-        cluster=${status%%:8443*};cluster=${cluster##*cluster.}
+        project=${status##* };project=${project%%/*};
+        cluster=${status##*cluster-};cluster=${cluster%%:*}
         color=${RED}
         if [[ "$cluster" == "poc" ]] ; then
             color=${GREEN}
         elif [[ "$cluster" == "dev" ]] ; then
             color=${YELLOW}
+        elif [[ "$cluster" == "demo" ]] ; then
+            color=${BLUE}
         fi
         echo "${color}[${project}@${cluster}]"
     fi

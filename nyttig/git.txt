@@ -1,0 +1,18 @@
+## Slette commit fra git
+git checkout prod
+
+# Vurder siste 100 commit, finn aktuell commit og velg d
+git rebase -i HEAD~100
+
+# Fiks ting som ikke gikk automatisk intill alle feil rettet:
+git status
+git add initscripts/createSecrets.sh
+git commit -am "rewrite"
+git rebase --continue
+git status
+git add initscripts/cron-clean-registry.yaml
+git commit -am "rewrite"
+git rebase --continue
+
+# Oppdater origin
+git push -f origin prod
