@@ -1,26 +1,27 @@
 #!/usr/bin/env bash
 RED=$(echo -en '\033[00;31m')
-GREEN=$(echo -en '\033[00;32m')
+GREEN=$(echo -en '\033[01;32m')
 #YELLOW=$(echo -en '\033[00;33m')
-YELLOW=$(echo -en '\e[0;32m')
-WHITE=$(echo -en '\e[0;97m')
-BLUE=$(echo -en '\033[00;34m')
+YELLOW=$(echo -en '\033[0;32m')
+WHITE=$(echo -en '\033[00m')
+BLUE=$(echo -en '\033[01;34m')
 
 function __ocp() {
     status=$(cat   ~/.kube/config |grep 'current-context')
     if [[ $? == 0 ]] ; then
         project=${status##* };project=${project%%/*};
-#        cluster=${status##*cluster-};cluster=${cluster%%:*}
         cluster=${status#*/};cluster=${cluster%%-corp*};
+#        echo $project
+#        echo $cluster
         color=${RED}
-        if [[ "$cluster" =~ test ]] ; then
-            color=${YELLOW}
+        if [[ "$cluster" =~ 'test-dchub' ]] ; then
+            color=${GREEN}
         elif [[ "$cluster" == "dev" ]] ; then
             color=${YELLOW}
-        elif [[ "$cluster" == "demo" ]] ; then
+        elif [[ "$cluster" == "test-bsshub" ]] ; then
             color=${BLUE}
         fi
-        echo "${color}[${project}@${cluster}]"
+        echo "$color[${project}@${cluster}]"
     fi
 }
 
@@ -36,13 +37,8 @@ git_branch() {
 
 function _tagWindow() {
   _TTAG=$1;
-  color='\e[0;97m';
-  textColor=$color;
-  if [[ $(hostname) =~ doc-prod-master ]] ;then color='\e[38;5;196m';textColor=$color;fi
-  if [[ $(hostname) =~ mgmt-devops01 ]] ;then color='\e[38;5;226m';textColor=$color;fi
-  if [[ $(hostname) =~ .* ]] ;then color='\e[38;5;226m';fi
-  if [[ $(hostname) =~ localhost ]] ;then color='\e[0;32m';fi
-  PS1="$(__ocp)\[$color\]\w$(git_branch)\n\[$textColor\]\$ "
+  openshift=$(__ocp)
+  PS1="\[\e]0;\u@\h:  \w \a\]$BLUE\w$openshift$(git_branch) $WHITE\n\$ "
 }
 _tagWindow
 function hg() { history|grep "$@"; }
@@ -74,20 +70,27 @@ log_bash_persistent_history()
 # Stuff to do on PROMPT_COMMAND
 run_on_prompt_command()
 {
-    log_bash_persistent_history
+    if [[ $? -eq 0 ]] ; then
+      log_bash_persistent_history
+    fi
     _tagWindow
 }
 
 PROMPT_COMMAND="run_on_prompt_command"
-export DATE_TIME='[0-9]*-[0-9]*-[0-9]*[ -][0-9]*:[0-9]*:[0-9]* '
+export DATE_TIME='[0-9]*-[0-9]*-[0-9]*[ -][0-9]*:[0-9]*:[0-9]*'
 function hgp {
- grep "$1" ~/.persistent_history |sed "s/$DATE_TIME.... //" |awk '!_[$0]++'|grep --color "$1"
+ grep "$1" ~/.persistent_history |sed "s/$DATE_TIME [0-9]* //" |awk '!_[$0]++'|grep --color "$1"
+}
+
+function hp {
+ tail -"$1" ~/.persistent_history |sed "s/$DATE_TIME [0-9]* //" |awk '!_[$0]++'
 }
 
 source <(~/bin/oc completion bash)
 source <(~/bin/kubectl completion bash)
 alias k=kubectl
 alias l='ls -lrt'
-
+export EDITOR='/usr/bin/vi'
+export OPENSHIFT_USER=t936990
 # setxkbmap no
 
