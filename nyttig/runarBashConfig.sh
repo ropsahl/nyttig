@@ -36,7 +36,7 @@ function _tagWindow() {
   if [[ $(hostname) =~ mgmt-devops01 ]] ;then color='\e[38;5;226m';textColor=$color;fi
   if [[ $(hostname) =~ .* ]] ;then color='\e[38;5;226m';fi
   if [[ $(hostname) =~ localhost ]] ;then color='\e[0;32m';fi
-  PS1="$(__ocp)$(git_branch)\[$color\]\w\[$textColor\]\n\$ "
+  PS1="\[$color\]\w\[$textColor\]\n\$ "
 }
 _tagWindow
 function hg() { history|grep "$@"; }

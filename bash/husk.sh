@@ -21,9 +21,10 @@ LPURPLE=$(echo -en '\033[01;35m')
 LCYAN=$(echo -en '\033[01;36m')
 WHITE=$(echo -en '\033[01;37m')
 
+v=30
 
 #for#range
-for i in {1..4};do echo -n ${SAVE_POS}; echo -n $i;sleep 1;echo -n ${RESTORE_POS}${DEL_EOL};done
+for i in {1..40};do echo -n ${SAVE_POS}; echo -n $i $(echo -en "\033[00;${v}m") $v $(echo -en '\033[01;37m');v=$((v+1));sleep 0.1;echo -n ${RESTORE_POS}${DEL_EOL};done
 
 
 #variable#substring
