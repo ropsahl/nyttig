@@ -68,19 +68,28 @@ function docker() {
 function docker-compose() {
   sudo /usr/bin/docker-compose "$@"
 }
-#source <(~/bin/oc completion bash)
-#source <(~/bin/kubectl completion bash)
-#alias k=kubectl
+
+export PROXY="https_proxy=socks5://127.0.0.1:12345"
+alias kubectl="${PROXY} kubectl"
+alias helm="${PROXY} helm"
+alias oc="${PROXY} oc"
+source <(oc completion bash)
+source <(kubectl completion bash)
+alias k=kubectl
+
 alias l='ls -lrt'
+
+
 
 export EDITOR='/usr/bin/vi'
 export PATH=~/java/bin:$PATH
 
 # TietoEvry
 function tsync() {
-    rsync -ulrv --delete --exclude '.idea' --exclude 'data' --exclude 'target' --exclude 'logs' --exclude 'workspace.xml' --exclude '.flattened-pom.xml' --exclude 'htmlReport' --exclude 'dockerlogs' ~/TietoEvry/$1/ ~/tietoevry/$1/
-    find ~/tietoevry/$1/scripts -type f -exec dos2unix {} \; &>/dev/null
+    rsync -ulrv --delete --exclude '.idea' --exclude 'data' --exclude 'target' --exclude 'logs' --exclude 'workspace.xml' --exclude '.flattened-pom.xml' --exclude 'htmlReport' --exclude 'dockerlogs' --exclude out ~/wCode/$1/ ~/code/$1/
+    find ~/code/$1/scripts -type f -exec dos2unix {} \; &>/dev/null
 }
+
 
 cd
 
