@@ -16,9 +16,11 @@ bind '"\e[B": history-search-forward'
 
 log_bash_persistent_history() {
   cmd=$(history 1)
-  if [ "$cmd" != "$PERSISTENT_HISTORY_LAST" ]; then
-    echo "$(date +'%Y-%m-%d-%H:%M:%S') ${cmd#* }" >>~/.persistent_history
-    export PERSISTENT_HISTORY_LAST="$cmd"
+  if [[ ! "$cmd" == "$PERSISTENT_HISTORY_LAST" ]] ; then
+    if [[ ! ${cmd#* } =~ ^hgp.* ]] ; then
+      echo "$(date +'%Y-%m-%d-%H:%M:%S') ${cmd#* }" >>~/.persistent_history
+      export PERSISTENT_HISTORY_LAST="$cmd"
+    fi
   fi
 }
 __git_ps1_color() {
@@ -40,6 +42,22 @@ PROMPT_COMMAND="run_on_prompt_command"
 export DATE_TIME='[0-9]*-[0-9]*-[0-9]*[ -][0-9]*:[0-9]*:[0-9]*'
 function hgp() {
   grep "$1" ~/.persistent_history | sed -r -e "/.{300,}/d" -e "s/$DATE_TIME [0-9]* //" | awk '!_[$0]++' | grep --color "$1"
+}
+
+function hgpp() {
+  greps=""
+  args=""
+  for a in "$@"; do
+    greps="$greps | grep $a "
+    args="$args -e $a "
+  done
+  cmd="cat ~/.persistent_history $greps | sed -r -e '/.{300,}/d' -e 's/$DATE_TIME [0-9]* //' | awk '!_[$0]++' | grep $args"
+  echo "CMD: $cmd"
+  eval "$cmd"
+}
+
+function husk() {
+  grep -A 10  -B 10 "$1" ~/.persistent_history | grep -v ^"$DATE_TIME" |sed 's/^EOF/-------------------------------------/'| grep  -A 10 -B 10 --color "$1"
 }
 
 function hp() {
@@ -73,8 +91,8 @@ export PROXY="https_proxy=socks5://127.0.0.1:12345"
 alias kubectl="${PROXY} kubectl"
 alias helm="${PROXY} helm"
 alias oc="${PROXY} oc"
-source <(oc completion bash)
-source <(kubectl completion bash)
+#source <(oc completion bash)
+#source <(kubectl completion bash)
 alias k=kubectl
 
 alias l='ls -lrt'
@@ -88,6 +106,7 @@ export PATH=~/java/bin:$PATH
 function tsync() {
     rsync -ulrv --delete --exclude '.idea' --exclude 'data' --exclude 'target' --exclude 'logs' --exclude 'workspace.xml' --exclude '.flattened-pom.xml' --exclude 'htmlReport' --exclude 'dockerlogs' --exclude out ~/wCode/$1/ ~/code/$1/
     find ~/code/$1/scripts -type f -exec dos2unix {} \; &>/dev/null
+    dos2unix Makefile
 }
 
 
